@@ -17,6 +17,7 @@ import io.trino.plugin.jdbc.DefaultJdbcMetadataFactory;
 import io.trino.plugin.jdbc.JdbcClient;
 import io.trino.plugin.jdbc.JdbcMetadata;
 import io.trino.plugin.jdbc.JdbcQueryEventListener;
+import io.trino.plugin.jdbc.SyntheticColumnHandleBuilder;
 
 import javax.inject.Inject;
 
@@ -29,9 +30,9 @@ public class Neo4jJdbcMetadataFactory
     private Set<JdbcQueryEventListener> jdbcQueryEventListeners;
 
     @Inject
-    public Neo4jJdbcMetadataFactory(JdbcClient jdbcClient, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
+    public Neo4jJdbcMetadataFactory(JdbcClient jdbcClient, Set<JdbcQueryEventListener> jdbcQueryEventListeners, SyntheticColumnHandleBuilder syntheticColumnBuilder)
     {
-        super(jdbcClient, jdbcQueryEventListeners);
+        super(jdbcClient, jdbcQueryEventListeners, syntheticColumnBuilder);
         this.jdbcClient = jdbcClient;
         this.jdbcQueryEventListeners = jdbcQueryEventListeners;
     }
@@ -39,6 +40,6 @@ public class Neo4jJdbcMetadataFactory
     @Override
     protected JdbcMetadata create(JdbcClient transactionCachingJdbcClient)
     {
-        return new Neo4jMetadata(this.jdbcClient, false, jdbcQueryEventListeners);
+        return new Neo4jMetadata(this.jdbcClient, false, jdbcQueryEventListeners, this.syntheticColumnBuilder);
     }
 }

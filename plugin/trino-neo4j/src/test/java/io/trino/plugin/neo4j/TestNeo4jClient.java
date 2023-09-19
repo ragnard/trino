@@ -24,7 +24,7 @@ import io.trino.plugin.jdbc.PreparedQuery;
 import io.trino.plugin.jdbc.credential.CredentialProvider;
 import io.trino.plugin.jdbc.credential.StaticCredentialProvider;
 import io.trino.plugin.jdbc.logging.RemoteQueryModifier;
-import io.trino.plugin.jdbc.mapping.DefaultIdentifierMapping;
+import io.trino.plugin.base.mapping.DefaultIdentifierMapping;
 import io.trino.spi.TrinoException;
 import io.trino.testing.QueryRunner;
 import org.testng.annotations.Test;

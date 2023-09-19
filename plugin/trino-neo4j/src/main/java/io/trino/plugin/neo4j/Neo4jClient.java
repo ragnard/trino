@@ -17,7 +17,7 @@ import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import io.airlift.log.Logger;
-import io.trino.collect.cache.EvictableCacheBuilder;
+import io.trino.cache.EvictableCacheBuilder;
 import io.trino.plugin.jdbc.BaseJdbcClient;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ColumnMapping;
@@ -35,7 +35,7 @@ import io.trino.plugin.jdbc.QueryBuilder;
 import io.trino.plugin.jdbc.StandardColumnMappings;
 import io.trino.plugin.jdbc.WriteMapping;
 import io.trino.plugin.jdbc.logging.RemoteQueryModifier;
-import io.trino.plugin.jdbc.mapping.IdentifierMapping;
+import io.trino.plugin.base.mapping.IdentifierMapping;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.predicate.TupleDomain;
@@ -367,10 +367,10 @@ public class Neo4jClient
                 Optional.empty(),
                 OptionalLong.empty(),
                 Optional.of(columns.build()),
-                // The query is opaque, so we don't know referenced tables
-                Optional.empty(),
+                Optional.empty(), // The query is opaque, so we don't know referenced tables
                 0,
-                Optional.empty());
+                Optional.empty(),
+                ImmutableList.of());
     }
 
     private Neo4jResultSetInfo loadNeo4jResultSetInfo(BoltNeo4jConnection boltNeo4jConnection, PreparedQuery preparedQuery)

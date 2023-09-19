@@ -17,6 +17,7 @@ import io.trino.plugin.jdbc.DefaultJdbcMetadata;
 import io.trino.plugin.jdbc.ForBaseJdbc;
 import io.trino.plugin.jdbc.JdbcClient;
 import io.trino.plugin.jdbc.JdbcQueryEventListener;
+import io.trino.plugin.jdbc.SyntheticColumnHandleBuilder;
 import io.trino.spi.connector.AggregateFunction;
 import io.trino.spi.connector.AggregationApplicationResult;
 import io.trino.spi.connector.ColumnHandle;
@@ -47,9 +48,9 @@ public class Neo4jMetadata
         extends DefaultJdbcMetadata
 {
     @Inject
-    public Neo4jMetadata(@ForBaseJdbc JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners)
+    public Neo4jMetadata(@ForBaseJdbc JdbcClient jdbcClient, boolean precalculateStatisticsForPushdown, Set<JdbcQueryEventListener> jdbcQueryEventListeners, SyntheticColumnHandleBuilder syntheticColumnBuilder)
     {
-        super(jdbcClient, precalculateStatisticsForPushdown, jdbcQueryEventListeners);
+        super(jdbcClient, precalculateStatisticsForPushdown, jdbcQueryEventListeners, syntheticColumnBuilder);
     }
 
     @Override

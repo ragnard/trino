@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.trino</groupId>
         <artifactId>trino-root</artifactId>
-        <version>419-SNAPSHOT</version>
+        <version>427-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -15,8 +15,8 @@
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>
-        <neo4j.jdbc.version>4.0.9</neo4j.jdbc.version>
-        <neo4j.java.version>4.4.9</neo4j.java.version>
+        <neo4j.jdbc.version>5.0.0</neo4j.jdbc.version>
+        <!--<neo4j.java.version>4.4.9</neo4j.java.version>-->
     </properties>
 
     <dependencies>
@@ -27,7 +27,7 @@
 
         <dependency>
             <groupId>io.trino</groupId>
-            <artifactId>trino-collect</artifactId>
+            <artifactId>trino-cache</artifactId>
         </dependency>
 
         <dependency>
@@ -65,11 +65,11 @@
             <version>${neo4j.jdbc.version}</version>
         </dependency>
 
-        <dependency>
+        <!--<dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
             <version>${neo4j.java.version}</version>
-        </dependency>
+        </dependency>-->
 
         <dependency>
             <groupId>io.airlift</groupId>
