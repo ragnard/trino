@@ -13,13 +13,12 @@
  */
 package io.trino.plugin.neo4j;
 
+import com.google.inject.Inject;
 import io.trino.plugin.jdbc.DefaultJdbcMetadataFactory;
 import io.trino.plugin.jdbc.JdbcClient;
 import io.trino.plugin.jdbc.JdbcMetadata;
 import io.trino.plugin.jdbc.JdbcQueryEventListener;
 import io.trino.plugin.jdbc.SyntheticColumnHandleBuilder;
-
-import javax.inject.Inject;
 
 import java.util.Set;
 

@@ -55,11 +55,6 @@
         </dependency>
 
         <dependency>
-            <groupId>javax.inject</groupId>
-            <artifactId>javax.inject</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-jdbc-bolt</artifactId>
             <version>${neo4j.jdbc.version}</version>

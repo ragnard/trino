@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.neo4j;
 
+import com.google.inject.Inject;
 import io.trino.plugin.jdbc.DefaultJdbcMetadata;
 import io.trino.plugin.jdbc.ForBaseJdbc;
 import io.trino.plugin.jdbc.JdbcClient;
@@ -36,8 +37,6 @@ import io.trino.spi.connector.SortItem;
 import io.trino.spi.connector.TableScanRedirectApplicationResult;
 import io.trino.spi.connector.TopNApplicationResult;
 import io.trino.spi.expression.ConnectorExpression;
-
-import javax.inject.Inject;
 
 import java.util.List;
 import java.util.Map;

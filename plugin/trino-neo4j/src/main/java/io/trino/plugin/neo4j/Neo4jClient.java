@@ -16,8 +16,10 @@ package io.trino.plugin.neo4j;
 import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import com.google.inject.Inject;
 import io.airlift.log.Logger;
 import io.trino.cache.EvictableCacheBuilder;
+import io.trino.plugin.base.mapping.IdentifierMapping;
 import io.trino.plugin.jdbc.BaseJdbcClient;
 import io.trino.plugin.jdbc.BaseJdbcConfig;
 import io.trino.plugin.jdbc.ColumnMapping;
@@ -35,7 +37,6 @@ import io.trino.plugin.jdbc.QueryBuilder;
 import io.trino.plugin.jdbc.StandardColumnMappings;
 import io.trino.plugin.jdbc.WriteMapping;
 import io.trino.plugin.jdbc.logging.RemoteQueryModifier;
-import io.trino.plugin.base.mapping.IdentifierMapping;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.predicate.TupleDomain;
@@ -53,8 +54,6 @@ import org.neo4j.driver.types.Type;
 import org.neo4j.jdbc.bolt.BoltNeo4jConnection;
 import org.neo4j.jdbc.bolt.BoltNeo4jResultSetMetaData;
 import org.neo4j.jdbc.utils.BoltNeo4jUtils;
-
-import javax.inject.Inject;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
