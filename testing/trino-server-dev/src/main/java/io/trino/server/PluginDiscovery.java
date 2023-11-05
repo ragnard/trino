@@ -16,7 +16,6 @@ package io.trino.server;
 import com.google.common.collect.ImmutableList;
 import io.trino.spi.Plugin;
 import org.objectweb.asm.ClassReader;
-import org.sonatype.aether.artifact.Artifact;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -37,6 +36,7 @@ import static com.google.common.io.ByteStreams.toByteArray;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.Files.createDirectories;
 import static java.nio.file.Files.walkFileTree;
+import static java.util.Objects.requireNonNull;
 
 // This is a hack for development and does not support nested classes.
 final class PluginDiscovery
@@ -46,29 +46,40 @@ final class PluginDiscovery
 
     private PluginDiscovery() {}
 
-    public static Set<String> discoverPlugins(Artifact artifact, ClassLoader classLoader)
+    public static PluginClassLoader addPluginServices(File pluginDir, File targetDir, PluginClassLoader classLoader)
             throws IOException
     {
-        if (!artifact.getExtension().equals("trino-plugin")) {
-            throw new RuntimeException("Unexpected extension for main artifact: " + artifact);
+        Set<String> plugins = discoverPlugins(pluginDir, classLoader);
+        if (!plugins.isEmpty()) {
+            File pluginDiscoveryDir = new File(targetDir, "plugin-discovery");
+            writePluginServices(plugins, pluginDiscoveryDir);
+            classLoader = classLoader.withUrl(pluginDiscoveryDir.toURI().toURL());
         }
 
-        File file = artifact.getFile();
-        if (!file.getPath().endsWith("/target/classes")) {
-            throw new RuntimeException("Unexpected file for main artifact: " + file);
+        return classLoader;
+    }
+
+    public static Set<String> discoverPlugins(File dir, ClassLoader classLoader)
+            throws IOException
+    {
+        requireNonNull(dir, "file is null");
+        requireNonNull(classLoader, "classLoader is null");
+
+        if (!dir.getPath().endsWith("/target/classes")) {
+            throw new RuntimeException("Unexpected file for main artifact: " + dir);
         }
-        if (!file.exists()) {
-            throw new RuntimeException("Main artifact directory does not exist: " + file);
+        if (!dir.exists()) {
+            throw new RuntimeException("Main artifact directory does not exist: " + dir);
         }
-        if (!file.isDirectory()) {
-            throw new RuntimeException("Main artifact location is not a directory: " + file);
+        if (!dir.isDirectory()) {
+            throw new RuntimeException("Main artifact location is not a directory: " + dir);
         }
 
-        if (new File(file, SERVICES_FILE).exists()) {
-            throw new RuntimeException("Unexpected services file in artifact directory: " + file);
+        if (new File(dir, SERVICES_FILE).exists()) {
+            throw new RuntimeException("Unexpected services file in artifact directory: " + dir);
         }
 
-        return listClasses(file.toPath()).stream()
+        return listClasses(dir.toPath()).stream()
                 .filter(name -> classInterfaces(name, classLoader).contains(Plugin.class.getName()))
                 .collect(toImmutableSet());
     }
