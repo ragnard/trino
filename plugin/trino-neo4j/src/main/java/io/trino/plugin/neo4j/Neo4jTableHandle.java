@@ -17,6 +17,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.trino.spi.connector.ConnectorTableHandle;
+import io.trino.spi.connector.SchemaTableName;
 
 import java.util.Optional;
 
@@ -42,6 +43,17 @@ public class Neo4jTableHandle
         return relationHandle;
     }
 
+    @JsonIgnore
+    public SchemaTableName getSchemaTableName()
+    {
+        if (relationHandle instanceof Neo4jNamedRelationHandle namedRelationHandle) {
+            return namedRelationHandle.getSchemaTableName();
+        } else if (relationHandle instanceof Neo4jNodesRelationHandle nodesRelationHandle) {
+            return new SchemaTableName(nodesRelationHandle.getDatabase(), "nodes");
+        } else {
+            throw new IllegalStateException("bleh");
+        }
+    }
     @JsonIgnore
     public Neo4jNamedRelationHandle getRequiredNamedRelation()
     {
@@ -79,4 +91,6 @@ public class Neo4jTableHandle
                 .add("relationHandle", relationHandle)
                 .toString();
     }
+
+
 }

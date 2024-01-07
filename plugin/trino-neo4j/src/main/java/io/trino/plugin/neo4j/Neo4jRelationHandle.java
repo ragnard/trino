@@ -22,6 +22,7 @@ import java.util.Optional;
         use = JsonTypeInfo.Id.NAME,
         property = "@type")
 @JsonSubTypes({
+        @JsonSubTypes.Type(value = Neo4jNodesRelationHandle.class, name = "nodes"),
         @JsonSubTypes.Type(value = Neo4jNamedRelationHandle.class, name = "named"),
         @JsonSubTypes.Type(value = Neo4jQueryRelationHandle.class, name = "query"),
 })

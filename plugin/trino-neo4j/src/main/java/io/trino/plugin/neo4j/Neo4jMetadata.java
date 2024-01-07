@@ -29,12 +29,15 @@ import io.trino.spi.connector.LimitApplicationResult;
 import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TableFunctionApplicationResult;
 import io.trino.spi.function.table.ConnectorTableFunctionHandle;
+import io.trino.spi.predicate.Domain;
+import io.trino.spi.predicate.ValueSet;
 import jakarta.annotation.Nullable;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.stream.Collectors;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -47,15 +50,17 @@ public class Neo4jMetadata
 {
     private final Neo4jClient client;
     private final Neo4jTypeManager typeManager;
+    private final Neo4jNodesTable nodesTable;
 
     public static final Neo4jColumnHandle ELEMENT_ID_COLUMN = new Neo4jColumnHandle(
             "$elementId", VARCHAR, true);
 
     @Inject
-    public Neo4jMetadata(Neo4jClient client, Neo4jTypeManager typeManager)
+    public Neo4jMetadata(Neo4jClient client, Neo4jTypeManager typeManager, Neo4jNodesTable nodesTable)
     {
         this.client = requireNonNull(client, "client is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
+        this.nodesTable = nodesTable;
     }
 
     @Override
@@ -105,14 +110,23 @@ public class Neo4jMetadata
                     table.getTableHandle().getRequiredNamedRelation().getSchemaTableName(),
                     table.getColumns().stream().map(Neo4jColumnHandle::toColumnMetadata).collect(toImmutableList()));
         }
+        else if (relationHandle instanceof Neo4jNodesRelationHandle nodesRelationHandle) {
+            SchemaTableName schemaTableName = new SchemaTableName(nodesRelationHandle.getDatabase(), "nodes");
+            Neo4jTable table = this.client.getTable(schemaTableName);
+
+            return new ConnectorTableMetadata(
+                    schemaTableName,
+                    table.getColumns().stream().map(Neo4jColumnHandle::toColumnMetadata).collect(Collectors.toList()));
+        }
 
         throw new IllegalStateException("Unknown Neo4jRelationHandle: %s".formatted(relationHandle.getClass()));
     }
 
+
     @Override
     public Map<String, ColumnHandle> getColumnHandles(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        Neo4jTable table = this.client.getTable(((Neo4jTableHandle) tableHandle).getRequiredNamedRelation().getSchemaTableName());
+        Neo4jTable table = this.client.getTable(((Neo4jTableHandle) tableHandle).getSchemaTableName());
 
         return table.getColumns()
                 .stream()
@@ -126,9 +140,29 @@ public class Neo4jMetadata
     }
 
     @Override
-    public Optional<ConstraintApplicationResult<ConnectorTableHandle>> applyFilter(ConnectorSession session, ConnectorTableHandle handle, Constraint constraint)
+    public Optional<ConstraintApplicationResult<ConnectorTableHandle>> applyFilter(ConnectorSession session, ConnectorTableHandle tableHandle, Constraint constraint)
     {
         // TupleDomain<ColumnHandle> summary = constraint.getSummary();
+
+        Neo4jTableHandle handle = (Neo4jTableHandle) tableHandle;
+
+        if (handle.getRelationHandle() instanceof Neo4jNodesRelationHandle nodesRelationHandle) {
+
+            Neo4jColumnHandle labelsColumn = nodesTable.getLabelsColumn();
+            Domain domain = constraint.getSummary().getDomain(labelsColumn, labelsColumn.getColumnType());
+            if (domain == null) {
+                return Optional.empty();
+            }
+
+            ValueSet values = domain.getValues();
+
+
+        } else {
+            return Optional.empty();
+        }
+
+        // constraint.getSummary().getDomain()
+
 
         return ConnectorMetadata.super.applyFilter(session, handle, constraint);
     }

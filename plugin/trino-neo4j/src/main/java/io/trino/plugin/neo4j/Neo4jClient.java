@@ -27,7 +27,6 @@ import org.neo4j.cypherdsl.core.AliasedExpression;
 import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Node;
 import org.neo4j.cypherdsl.core.Relationship;
-import org.neo4j.cypherdsl.core.Statement;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
@@ -41,9 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.concurrent.ExecutionException;
 
-import static com.google.common.base.Throwables.throwIfInstanceOf;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.plugin.neo4j.Neo4jNamedRelationHandle.TableType.NODE;
 import static io.trino.spi.StandardErrorCode.TABLE_NOT_FOUND;
@@ -60,19 +57,22 @@ public class Neo4jClient
     private final Driver driver;
     private final Neo4jTypeManager typeManager;
 
-    private final Cache<SchemaTableName, Neo4jRemoteTableName> tableNameCache;
+    private final Neo4jNodesTable nodesTable;
+    /*private final Cache<SchemaTableName, Neo4jRemoteTableName> tableNameCache;*/
     private final Cache<SchemaTableName, Neo4jTable> tableCache;
 
     @Inject
     public Neo4jClient(
             Neo4jConnectorConfig config,
-            Neo4jTypeManager typeManager)
+            Neo4jTypeManager typeManager,
+            Neo4jNodesTable nodesTable)
     {
         this.driver = GraphDatabase.driver(config.getURI(), getAuthToken(config));
         this.typeManager = typeManager;
-        this.tableNameCache = EvictableCacheBuilder.newBuilder()
+        this.nodesTable = nodesTable;
+        /*this.tableNameCache = EvictableCacheBuilder.newBuilder()
                 .expireAfterWrite(Duration.ofMinutes(1))
-                .build();
+                .build();*/
 
         this.tableCache = EvictableCacheBuilder.newBuilder()
                 .expireAfterWrite(Duration.ofMinutes(1))
@@ -105,7 +105,12 @@ public class Neo4jClient
     // Nodes and relationships are mapped to tables.
     public List<SchemaTableName> listTables(ConnectorSession connectorSession, Optional<String> schemaName)
     {
-        Statement statement =
+        return ImmutableList.of(
+                new SchemaTableName(schemaName.orElse(DEFAULT_DATABASE), "nodes")
+                // new SchemaTableName(schemaName.orElse(DEFAULT_DATABASE), "relationships")
+        );
+
+        /*Statement statement =
                 Cypher.union(
                         Cypher.call("db.labels")
                                 .yield("label")
@@ -139,29 +144,37 @@ public class Neo4jClient
                         })
                         .collect(toImmutableList());
             });
-        }
+        }*/
     }
 
     public Neo4jTable getTable(SchemaTableName schemaTableName)
     {
-        try {
+        return switch (schemaTableName.getTableName()) {
+            case "nodes" -> this.nodesTable.getNodesTable(schemaTableName.getSchemaName());
+            default -> throw new IllegalStateException("Unexpected value: " + schemaTableName.getTableName());
+        };
+
+        /*try {
             return this.tableCache.get(schemaTableName, () -> loadTable(schemaTableName));
         }
         catch (ExecutionException e) {
             throwIfInstanceOf(e.getCause(), TrinoException.class);
             throw new RuntimeException(e);
-        }
+        }*/
     }
 
     private Neo4jRemoteTableName getRemoteTableName(SchemaTableName schemaTableName)
     {
-        try {
-            return this.tableNameCache.get(schemaTableName, () -> this.loadRemoteTableName(schemaTableName));
+        return this.loadRemoteTableName(schemaTableName);
+
+        /*try {
+            //return this.tableNameCache.get(schemaTableName, () -> this.loadRemoteTableName(schemaTableName));
+
         }
         catch (ExecutionException e) {
             throwIfInstanceOf(e.getCause(), TrinoException.class);
             throw new RuntimeException(e);
-        }
+        }*/
     }
 
     private Neo4jTable loadTable(SchemaTableName schemaTableName)
@@ -281,6 +294,10 @@ public class Neo4jClient
     {
         if (table.getRelationHandle() instanceof Neo4jQueryRelationHandle queryHandle) {
             return queryHandle.getQuery();
+        }
+
+        if (table.getRelationHandle() instanceof Neo4jNodesRelationHandle nodesHandle) {
+            return nodesHandle.getQuery(columnHandles);
         }
 
         Neo4jNamedRelationHandle namedRelation = table.getRequiredNamedRelation();
