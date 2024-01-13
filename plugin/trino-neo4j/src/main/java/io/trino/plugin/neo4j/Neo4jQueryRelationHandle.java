@@ -28,17 +28,17 @@ public class Neo4jQueryRelationHandle
 {
     private final String query;
     private final Descriptor descriptor;
-    private final Optional<String> databaseName;
+    private final Optional<String> database;
 
     @JsonCreator
     public Neo4jQueryRelationHandle(
             @JsonProperty("query") String query,
             @JsonProperty("descriptor") Descriptor descriptor,
-            @JsonProperty("databaseName") Optional<String> databaseName)
+            @JsonProperty("database") Optional<String> database)
     {
         this.query = requireNonNull(query, "query is null");
         this.descriptor = requireNonNull(descriptor, "descriptor is null");
-        this.databaseName = requireNonNull(databaseName, "databaseName is null");
+        this.database = requireNonNull(database, "database is null");
     }
 
     @JsonProperty
@@ -57,7 +57,7 @@ public class Neo4jQueryRelationHandle
     @Override
     public Optional<String> getDatabase()
     {
-        return this.databaseName;
+        return this.database;
     }
 
     @Override
