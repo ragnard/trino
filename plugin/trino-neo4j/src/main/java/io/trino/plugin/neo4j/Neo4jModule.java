@@ -42,7 +42,6 @@ public class Neo4jModule
         binder.bind(Neo4jSplitManager.class).in(Scopes.SINGLETON);
         binder.bind(Neo4jRecordSetProvider.class).in(Scopes.SINGLETON);
         binder.bind(Neo4jTypeManager.class).in(Scopes.SINGLETON);
-        binder.bind(Neo4jNodesTable.class).in(Scopes.SINGLETON);
         binder.bind(TypeSystem.class).toProvider(TypeSystem::getDefault).in(Scopes.SINGLETON);
 
         configBinder(binder).bindConfig(Neo4jConnectorConfig.class);

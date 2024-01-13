@@ -15,11 +15,9 @@ package io.trino.plugin.neo4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.trino.spi.connector.ColumnHandle;
-import io.trino.spi.predicate.TupleDomain;
 import org.neo4j.cypherdsl.core.AliasedExpression;
 import org.neo4j.cypherdsl.core.Cypher;
-import org.neo4j.cypherdsl.core.Node;
+import org.neo4j.cypherdsl.core.Relationship;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,23 +28,22 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 import static org.neo4j.cypherdsl.core.Conditions.noCondition;
 
-public class Neo4jNodesRelationHandle
+public class Neo4jRelationshipsRelationHandle
         extends Neo4jRelationHandle
 {
     private final Optional<String> database;
-    private final List<String> labels;
+    private final Optional<String> type;
     private final OptionalLong limit;
-    private TupleDomain<ColumnHandle> constraints;
 
     @JsonCreator
-    public Neo4jNodesRelationHandle(
+    public Neo4jRelationshipsRelationHandle(
             @JsonProperty("database") Optional<String> database,
-            @JsonProperty("labels") List<String> labels,
+            @JsonProperty("type") Optional<String> type,
             @JsonProperty("limit") OptionalLong limit)
 
     {
         this.database = requireNonNull(database, "database is null");
-        this.labels = requireNonNull(labels, "labels is null");
+        this.type = type;
         this.limit = limit;
     }
 
@@ -58,9 +55,9 @@ public class Neo4jNodesRelationHandle
     }
 
     @JsonProperty
-    public List<String> getLabels()
+    public Optional<String> getType()
     {
-        return this.labels;
+        return this.type;
     }
 
     @JsonProperty
@@ -74,26 +71,25 @@ public class Neo4jNodesRelationHandle
     {
         return toStringHelper(this)
                 .add("database", database)
-                .add("labels", labels)
+                .add("type", type)
                 .add("limit", limit)
                 .toString();
     }
 
     public String getQuery(List<Neo4jColumnHandle> columnHandles)
     {
-        // TODO: all labels
-        Node node = this.labels.isEmpty() ? Cypher.anyNode() : Cypher.node(this.labels.get(0));
+        Relationship r = Cypher.anyNode().relationshipBetween(Cypher.anyNode(), this.type.orElse(null));
 
         List<AliasedExpression> columns = columnHandles.stream()
                 .map(c -> switch (c.getColumnName()) {
-                    case "elementId" -> Cypher.elementId(node).as(c.getColumnName());
-                    case "labels" -> Cypher.labels(node).as(c.getColumnName());
-                    case "properties" -> Cypher.properties(node).as(c.getColumnName());
+                    case "elementid" -> Cypher.elementId(r).as(c.getColumnName());
+                    case "type" -> Cypher.type(r).as(c.getColumnName());
+                    case "properties" -> Cypher.properties(r).as(c.getColumnName());
                     default -> throw new IllegalStateException("Unexpected column: " + c.getColumnName());
                 })
                 .collect(Collectors.toList());
 
-        return Cypher.match(node)
+        return Cypher.match(r)
                 .where(noCondition())
                 .returning(columns)
                 .limit(this.limit.orElse(10_000))

@@ -15,7 +15,6 @@ package io.trino.plugin.neo4j;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import io.trino.spi.type.ArrayType;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,39 +22,40 @@ import java.util.OptionalLong;
 
 import static io.trino.spi.type.VarcharType.VARCHAR;
 
-public class Neo4jNodesTable implements Neo4jTable
+public class Neo4jRelationshipsTable
+        implements Neo4jTable
 {
     private final Neo4jColumnHandle elementIdColumn;
-    private final Neo4jColumnHandle labelsColumn;
+    private final Neo4jColumnHandle typeColumn;
     private final Neo4jColumnHandle propertiesColumn;
 
     @Inject
-    public Neo4jNodesTable(Neo4jTypeManager typeManager)
+    public Neo4jRelationshipsTable(Neo4jTypeManager typeManager)
     {
-        this.elementIdColumn = new Neo4jColumnHandle("elementId", VARCHAR, false);
-        this.labelsColumn = new Neo4jColumnHandle("labels", new ArrayType(VARCHAR), false);
+        this.elementIdColumn = new Neo4jColumnHandle("elementid", VARCHAR, false);
+        this.typeColumn = new Neo4jColumnHandle("type", VARCHAR, false);
         this.propertiesColumn = new Neo4jColumnHandle("properties", typeManager.getJsonType(), false);
     }
 
     @Override
     public Neo4jTableHandle getTableHandle(String database)
     {
-        return new Neo4jTableHandle(new Neo4jNodesRelationHandle(Optional.ofNullable(database), ImmutableList.of(), OptionalLong.empty()));
+        return new Neo4jTableHandle(new Neo4jRelationshipsRelationHandle(Optional.ofNullable(database), Optional.empty(), OptionalLong.empty()));
     }
 
-    public List<Neo4jColumnHandle> getColumns() {
-        return ImmutableList.of(this.elementIdColumn, this.labelsColumn, this.propertiesColumn);
+    public List<Neo4jColumnHandle> getColumns()
+    {
+        return ImmutableList.of(this.elementIdColumn, this.typeColumn, this.propertiesColumn);
     }
-
 
     public Neo4jColumnHandle getElementIdColumn()
     {
         return elementIdColumn;
     }
 
-    public Neo4jColumnHandle getLabelsColumn()
+    public Neo4jColumnHandle getTypeColumn()
     {
-        return labelsColumn;
+        return typeColumn;
     }
 
     public Neo4jColumnHandle getPropertiesColumn()

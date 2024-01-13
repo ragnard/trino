@@ -55,7 +55,7 @@ public class Neo4jQueryRelationHandle
 
     @JsonProperty
     @Override
-    public Optional<String> getDatabaseName()
+    public Optional<String> getDatabase()
     {
         return this.databaseName;
     }

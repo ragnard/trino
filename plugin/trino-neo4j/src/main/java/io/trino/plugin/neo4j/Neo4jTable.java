@@ -15,24 +15,9 @@ package io.trino.plugin.neo4j;
 
 import java.util.List;
 
-public class Neo4jTable
+public interface Neo4jTable
 {
-    private final Neo4jTableHandle tableHandle;
-    private final List<Neo4jColumnHandle> columns;
+    Neo4jTableHandle getTableHandle(String database);
 
-    public Neo4jTable(Neo4jTableHandle tableHandle, List<Neo4jColumnHandle> columns)
-    {
-        this.tableHandle = tableHandle;
-        this.columns = columns;
-    }
-
-    public Neo4jTableHandle getTableHandle()
-    {
-        return tableHandle;
-    }
-
-    public List<Neo4jColumnHandle> getColumns()
-    {
-        return columns;
-    }
+    List<Neo4jColumnHandle> getColumns();
 }

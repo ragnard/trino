@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.neo4j;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.trino.plugin.neo4j.ptf.Query;
 import io.trino.spi.TrinoException;
@@ -42,7 +43,6 @@ import java.util.stream.Collectors;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
-import static io.trino.spi.type.VarcharType.VARCHAR;
 import static java.util.Objects.requireNonNull;
 
 public class Neo4jMetadata
@@ -51,16 +51,21 @@ public class Neo4jMetadata
     private final Neo4jClient client;
     private final Neo4jTypeManager typeManager;
     private final Neo4jNodesTable nodesTable;
+    private final Neo4jRelationshipsTable relationshipsTable;
 
-    public static final Neo4jColumnHandle ELEMENT_ID_COLUMN = new Neo4jColumnHandle(
-            "$elementId", VARCHAR, true);
+    private final Map<String, Neo4jTable> tables;
 
     @Inject
-    public Neo4jMetadata(Neo4jClient client, Neo4jTypeManager typeManager, Neo4jNodesTable nodesTable)
+    public Neo4jMetadata(Neo4jClient client, Neo4jTypeManager typeManager)
     {
         this.client = requireNonNull(client, "client is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
-        this.nodesTable = nodesTable;
+        this.nodesTable = new Neo4jNodesTable(typeManager);
+        this.relationshipsTable = new Neo4jRelationshipsTable(typeManager);
+        this.tables = Map.of(
+                "nodes", nodesTable,
+                "relationships", relationshipsTable
+        );
     }
 
     @Override
@@ -72,7 +77,10 @@ public class Neo4jMetadata
     @Override
     public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> schemaName)
     {
-        return this.client.listTables(session, schemaName);
+        return this.tables.keySet()
+                .stream()
+                .map(name -> new SchemaTableName(schemaName.orElseThrow(), name))
+                .collect(toImmutableList());
     }
 
     @Nullable
@@ -83,7 +91,9 @@ public class Neo4jMetadata
             throw new TrinoException(NOT_SUPPORTED, "This connector does not support versioned tables");
         }
 
-        return this.client.getTable(schemaTableName).getTableHandle();
+        return this.tables
+                .get(schemaTableName.getTableName())
+                .getTableHandle(schemaTableName.getSchemaName());
     }
 
     @Override
@@ -103,34 +113,50 @@ public class Neo4jMetadata
                     new SchemaTableName("_generated", "_generated_query"),
                     columnMetadata);
         }
-        else if (relationHandle instanceof Neo4jNamedRelationHandle namedRelationHandle) {
-            Neo4jTable table = this.client.getTable(namedRelationHandle.getSchemaTableName());
-
-            return new ConnectorTableMetadata(
-                    table.getTableHandle().getRequiredNamedRelation().getSchemaTableName(),
-                    table.getColumns().stream().map(Neo4jColumnHandle::toColumnMetadata).collect(toImmutableList()));
-        }
         else if (relationHandle instanceof Neo4jNodesRelationHandle nodesRelationHandle) {
-            SchemaTableName schemaTableName = new SchemaTableName(nodesRelationHandle.getDatabase(), "nodes");
-            Neo4jTable table = this.client.getTable(schemaTableName);
+            SchemaTableName schemaTableName = new SchemaTableName(nodesRelationHandle.getDatabase().orElseThrow(), "nodes");
 
             return new ConnectorTableMetadata(
                     schemaTableName,
-                    table.getColumns().stream().map(Neo4jColumnHandle::toColumnMetadata).collect(Collectors.toList()));
+                    nodesTable.getColumns()
+                            .stream()
+                            .map(Neo4jColumnHandle::toColumnMetadata)
+                            .collect(Collectors.toList()));
+        }
+        else if (relationHandle instanceof Neo4jRelationshipsRelationHandle relationshipsRelationHandle) {
+            SchemaTableName schemaTableName = new SchemaTableName(relationshipsRelationHandle.getDatabase().orElseThrow(), "relationships");
+
+            return new ConnectorTableMetadata(
+                    schemaTableName,
+                    relationshipsTable.getColumns()
+                            .stream()
+                            .map(Neo4jColumnHandle::toColumnMetadata)
+                            .collect(Collectors.toList()));
         }
 
         throw new IllegalStateException("Unknown Neo4jRelationHandle: %s".formatted(relationHandle.getClass()));
     }
 
-
     @Override
     public Map<String, ColumnHandle> getColumnHandles(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
-        Neo4jTable table = this.client.getTable(((Neo4jTableHandle) tableHandle).getSchemaTableName());
+        Neo4jTableHandle handle = (Neo4jTableHandle) tableHandle;
+        Neo4jRelationHandle relationHandle = handle.getRelationHandle();
 
-        return table.getColumns()
-                .stream()
-                .collect(toImmutableMap(Neo4jColumnHandle::getColumnName, c -> c));
+        //this.tables.get(handle.)
+
+        if (relationHandle instanceof Neo4jNodesRelationHandle nodesRelationHandle) {
+            return this.nodesTable.getColumns()
+                    .stream()
+                    .collect(toImmutableMap(Neo4jColumnHandle::getColumnName, c -> c));
+        }
+        if (relationHandle instanceof Neo4jRelationshipsRelationHandle relationshipsRelationHandle) {
+            return this.relationshipsTable.getColumns()
+                    .stream()
+                    .collect(toImmutableMap(Neo4jColumnHandle::getColumnName, c -> c));
+        }
+
+        return ImmutableMap.of();
     }
 
     @Override
@@ -155,14 +181,12 @@ public class Neo4jMetadata
             }
 
             ValueSet values = domain.getValues();
-
-
-        } else {
+        }
+        else {
             return Optional.empty();
         }
 
         // constraint.getSummary().getDomain()
-
 
         return ConnectorMetadata.super.applyFilter(session, handle, constraint);
     }
@@ -172,7 +196,16 @@ public class Neo4jMetadata
     {
         Neo4jTableHandle handle = (Neo4jTableHandle) tableHandle;
 
-        return handle.getNamedRelation()
+        if (handle.getRelationHandle() instanceof Neo4jNodesRelationHandle nodesRelationHandle) {
+            Neo4jNodesRelationHandle newHandle = new Neo4jNodesRelationHandle(
+                    nodesRelationHandle.getDatabase(),
+                    nodesRelationHandle.getLabels(),
+                    OptionalLong.of(limit));
+
+            return Optional.of(new LimitApplicationResult<>(new Neo4jTableHandle(newHandle), true, true));
+        }
+
+        /*return handle.getNamedRelation()
                 .map(r -> {
                     Neo4jTableHandle tableHandleWithLimit = new Neo4jTableHandle(new Neo4jNamedRelationHandle(
                             r.getSchemaTableName(),
@@ -180,7 +213,8 @@ public class Neo4jMetadata
                             r.getTableType(),
                             OptionalLong.of(limit)));
                     return new LimitApplicationResult<>(tableHandleWithLimit, true, true);
-                });
+                });*/
+        return Optional.empty();
     }
 
     @Override

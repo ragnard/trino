@@ -56,12 +56,14 @@ public class Neo4jRecordSetProvider
                 .map(c -> (Neo4jColumnHandle) c)
                 .collect(toImmutableList());
 
+        // tableHandle.toCypherQuery()
+
         String cypher = requireNonNull(client, "client is null").toCypher(tableHandle, columnHandles);
 
         return new Neo4jRecordSet(
                 this.client,
                 this.typeManager,
-                tableHandle.getRelationHandle().getDatabaseName(),
+                tableHandle.getRelationHandle().getDatabase(),
                 cypher,
                 columnHandles);
     }
