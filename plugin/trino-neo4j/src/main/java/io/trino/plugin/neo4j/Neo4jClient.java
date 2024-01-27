@@ -43,14 +43,20 @@ public class Neo4jClient
 
     private final Driver driver;
     private final Neo4jTypeManager typeManager;
+    private final Neo4jStatementBuilder statementBuilder;
+    private final Neo4jTables tables;
 
     @Inject
     public Neo4jClient(
             Neo4jConnectorConfig config,
-            Neo4jTypeManager typeManager)
+            Neo4jTypeManager typeManager,
+            Neo4jStatementBuilder statementBuilder,
+            Neo4jTables tables)
     {
         this.driver = GraphDatabase.driver(config.getURI(), getAuthToken(config));
         this.typeManager = typeManager;
+        this.statementBuilder = statementBuilder;
+        this.tables = tables;
     }
 
     private static AuthToken getAuthToken(Neo4jConnectorConfig config)
@@ -78,19 +84,10 @@ public class Neo4jClient
 
     public String toCypher(Neo4jTableHandle table, List<Neo4jColumnHandle> columnHandles)
     {
-        if (table.getRelationHandle() instanceof Neo4jQueryRelationHandle queryHandle) {
-            return queryHandle.getQuery();
-        }
-
-        if (table.getRelationHandle() instanceof Neo4jNodesRelationHandle handle) {
-            return handle.getQuery(columnHandles);
-        }
-
-        if (table.getRelationHandle() instanceof Neo4jRelationshipsRelationHandle handle) {
-            return handle.getQuery(columnHandles);
-        }
-
-        throw new IllegalStateException("TODO");
+        return switch (table.getRelationHandle()) {
+            case Neo4jQueryRelationHandle handle -> handle.getQuery();
+            case Neo4jTableRelationHandle handle -> this.tables.get(handle.getType()).toCypherQuery(handle, columnHandles);
+        };
     }
 
     @Override

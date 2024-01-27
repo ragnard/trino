@@ -23,7 +23,7 @@ import java.util.Optional;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
 
-public class Neo4jQueryRelationHandle
+public final class Neo4jQueryRelationHandle
         extends Neo4jRelationHandle
 {
     private final String query;

@@ -17,6 +17,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.trino</groupId>
+            <artifactId>trino-neo4j</artifactId>
+            <version>437-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>

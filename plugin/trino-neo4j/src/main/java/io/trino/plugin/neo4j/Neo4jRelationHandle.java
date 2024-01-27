@@ -22,11 +22,11 @@ import java.util.Optional;
         use = JsonTypeInfo.Id.NAME,
         property = "@type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = Neo4jNodesRelationHandle.class, name = "nodes"),
-        @JsonSubTypes.Type(value = Neo4jRelationshipsRelationHandle.class, name = "relationships"),
+        @JsonSubTypes.Type(value = Neo4jTableRelationHandle.class, name = "table"),
         @JsonSubTypes.Type(value = Neo4jQueryRelationHandle.class, name = "query"),
 })
-public abstract class Neo4jRelationHandle
+public sealed abstract class Neo4jRelationHandle
+        permits Neo4jQueryRelationHandle, Neo4jTableRelationHandle
 {
     public abstract Optional<String> getDatabase();
 

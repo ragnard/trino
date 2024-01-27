@@ -17,37 +17,58 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.predicate.TupleDomain;
-import org.neo4j.cypherdsl.core.AliasedExpression;
-import org.neo4j.cypherdsl.core.Cypher;
-import org.neo4j.cypherdsl.core.Node;
 
-import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.stream.Collectors;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
-import static org.neo4j.cypherdsl.core.Conditions.noCondition;
 
-public class Neo4jNodesRelationHandle
+public final class Neo4jTableRelationHandle
         extends Neo4jRelationHandle
 {
+    public enum Type {
+        NODES,
+        RELATIONSHIPS;
+
+        public String getTableName() {
+            return this.name().toLowerCase(Locale.ENGLISH);
+        }
+
+        public static Type fromTableName(String tableName) {
+            requireNonNull(tableName, "tableName is null");
+
+            try {
+                return Type.valueOf(tableName.toUpperCase(Locale.ENGLISH));
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+    }
+
+    private final Type type;
     private final Optional<String> database;
-    private final List<String> labels;
     private final OptionalLong limit;
-    private TupleDomain<ColumnHandle> constraints;
+    private final TupleDomain<ColumnHandle> constraints;
 
     @JsonCreator
-    public Neo4jNodesRelationHandle(
+    public Neo4jTableRelationHandle(
+            @JsonProperty("type") Type type,
             @JsonProperty("database") Optional<String> database,
-            @JsonProperty("labels") List<String> labels,
+            @JsonProperty("constraints") TupleDomain<ColumnHandle> constraints,
             @JsonProperty("limit") OptionalLong limit)
 
     {
+        this.type = requireNonNull(type, "type is null");
         this.database = requireNonNull(database, "database is null");
-        this.labels = requireNonNull(labels, "labels is null");
+        this.constraints = requireNonNull(constraints, "constraints is null");
         this.limit = limit;
+    }
+
+    @JsonProperty
+    public Type getType() {
+        return this.type;
     }
 
     @Override
@@ -58,9 +79,9 @@ public class Neo4jNodesRelationHandle
     }
 
     @JsonProperty
-    public List<String> getLabels()
+    public TupleDomain<ColumnHandle> getConstraints()
     {
-        return this.labels;
+        return this.constraints;
     }
 
     @JsonProperty
@@ -74,30 +95,8 @@ public class Neo4jNodesRelationHandle
     {
         return toStringHelper(this)
                 .add("database", database)
-                .add("labels", labels)
+                .add("constraints", constraints)
                 .add("limit", limit)
                 .toString();
-    }
-
-    public String getQuery(List<Neo4jColumnHandle> columnHandles)
-    {
-        // TODO: all labels
-        Node node = this.labels.isEmpty() ? Cypher.anyNode() : Cypher.node(this.labels.get(0));
-
-        List<AliasedExpression> columns = columnHandles.stream()
-                .map(c -> switch (c.getColumnName()) {
-                    case "elementId" -> Cypher.elementId(node).as(c.getColumnName());
-                    case "labels" -> Cypher.labels(node).as(c.getColumnName());
-                    case "properties" -> Cypher.properties(node).as(c.getColumnName());
-                    default -> throw new IllegalStateException("Unexpected column: " + c.getColumnName());
-                })
-                .collect(Collectors.toList());
-
-        return Cypher.match(node)
-                .where(noCondition())
-                .returning(columns)
-                .limit(this.limit.orElse(10_000))
-                .build()
-                .getCypher();
     }
 }

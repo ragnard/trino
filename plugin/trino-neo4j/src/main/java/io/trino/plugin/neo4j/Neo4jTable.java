@@ -13,11 +13,23 @@
  */
 package io.trino.plugin.neo4j;
 
+import io.trino.spi.connector.ColumnHandle;
+import io.trino.spi.connector.Constraint;
+import io.trino.spi.predicate.TupleDomain;
+
 import java.util.List;
 
 public interface Neo4jTable
 {
+    Neo4jTableRelationHandle.Type getTableType();
+
     Neo4jTableHandle getTableHandle(String database);
 
     List<Neo4jColumnHandle> getColumns();
+
+    record PushdownResult(TupleDomain<ColumnHandle> newDomain, TupleDomain<ColumnHandle> remainingFilter) {}
+
+    PushdownResult pushDown(Constraint constraint);
+
+    String toCypherQuery(Neo4jTableRelationHandle handle, List<Neo4jColumnHandle> columnHandles);
 }
